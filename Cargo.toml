@@ -1,0 +1,13 @@
+[workspace]
+members = ["arcade_jump", "arcade_jump_macros"]
+resolver = "3"
+
+[workspace.package]
+description = "Arcade jump trajectory configurator"
+authors = ["Olivier Schyns"]
+keywords = ["game", "jump", "ballistic", "mathematics"]
+categories = ["game-engines", "no-std"]
+repository = "https://github.com/oschijns/arcade_jump"
+license = "MIT"
+version = "0.0.1"
+edition = "2024"
