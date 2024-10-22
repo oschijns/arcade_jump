@@ -1,25 +1,19 @@
 #![cfg_attr(not(test), no_std)]
 
-/// Compute gravity
-mod gravity;
-
 /// Compute peak height
-mod height;
-
-/// Compute impulse
-mod impulse;
-
-/// Compute parameters of a jump trajectory
-mod jump;
+pub mod height;
 
 /// Compute time to peak
-mod time;
+pub mod time;
 
-pub use gravity::Gravity;
-pub use height::PeakHeight;
-pub use impulse::Impulse;
-pub use jump::JumpParameter;
-pub use time::TimeToPeak;
+/// Compute impulse
+pub mod impulse;
+
+/// Compute gravity
+pub mod gravity;
+
+/// Compute parameters of a jump trajectory
+pub mod jump;
 
 mod math {
 
@@ -34,53 +28,28 @@ mod math {
         }};
     }
 
-    macro_rules! sqrt {
-        ($var:ident as f32) => {
-            libm::sqrtf(libm::fabsf($var as f32))
-        };
-        ($var:ident as f64) => {
-            libm::sqrt(libm::fabs($var as f64))
-        };
-        (($val:expr) as f32) => {
-            libm::sqrtf(libm::fabsf($val as f32))
-        };
-        (($val:expr) as f64) => {
-            libm::sqrt(libm::fabs($val as f64))
-        };
-    }
-
     pub(crate) use pow2;
-    pub(crate) use sqrt;
 }
 
 #[macro_export]
 macro_rules! solve {
     ({$height:expr, $time:expr, ?, ?} as $typ:ty) => {
-        <$typ as $crate::JumpParameter>::from_height_and_time(($height) as $typ, ($time) as $typ)
+        $crate::jump::from_height_and_time(($height) as $typ, ($time) as $typ)
     };
     ({$height:expr, ?, $impulse:expr, ?} as $typ:ty) => {
-        <$typ as $crate::JumpParameter>::from_height_and_impulse(
-            ($height) as $typ,
-            ($impulse) as $typ,
-        )
+        $crate::jump::from_height_and_impulse(($height) as $typ, ($impulse) as $typ)
     };
     ({$height:expr, ?, ?, $gravity:expr} as $typ:ty) => {
-        <$typ as $crate::JumpParameter>::from_height_and_gravity(
-            ($height) as $typ,
-            ($gravity) as $typ,
-        )
+        $crate::jump::from_height_and_gravity::<$typ, f64>(($height) as $typ, ($gravity) as $typ)
     };
     ({?, $time:expr, $impulse:expr, ?} as $typ:ty) => {
-        <$typ as $crate::JumpParameter>::from_time_and_impulse(($time) as $typ, ($impulse) as $typ)
+        $crate::jump::from_time_and_impulse(($time) as $typ, ($impulse) as $typ)
     };
     ({?, $time:expr, ?, $gravity:expr} as $typ:ty) => {
-        <$typ as $crate::JumpParameter>::from_time_and_gravity(($time) as $typ, ($gravity) as $typ)
+        $crate::jump::from_time_and_gravity(($time) as $typ, ($gravity) as $typ)
     };
     ({?, ?, $impulse:expr, $gravity:expr} as $typ:ty) => {
-        <$typ as $crate::JumpParameter>::from_impulse_and_gravity(
-            ($impulse) as $typ,
-            ($gravity) as $typ,
-        )
+        $crate::jump::from_impulse_and_gravity(($impulse) as $typ, ($gravity) as $typ)
     };
 }
 

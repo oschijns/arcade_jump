@@ -1,43 +1,39 @@
-use crate::math::sqrt;
+use core::ops::Neg;
+use num::{cast::AsPrimitive, traits::NumOps, Float};
 
-/// Compute vertical impulse coefficient from other parameters
-pub trait Impulse {
-    fn from_height_and_time(h: Self, t: Self) -> Self;
-
-    fn from_height_and_gravity(h: Self, g: Self) -> Self;
-
-    fn from_time_and_gravity(t: Self, g: Self) -> Self;
+/// Compute the vertical impulse from the peak height and the time to reach the peak
+#[inline]
+pub fn impulse_from_height_and_time<N: 'static + NumOps + Copy>(h: N, t: N) -> N
+where
+    isize: AsPrimitive<N>,
+{
+    2.as_() * h / t
 }
 
-macro_rules! impl_impulse {
-    ($typ:ty : $float:ident) => {
-        impl Impulse for $typ {
-            #[inline]
-            fn from_height_and_time(h: Self, t: Self) -> Self {
-                2 as $typ * h / t
-            }
-
-            #[inline]
-            fn from_height_and_gravity(h: Self, g: Self) -> Self {
-                sqrt![(2 as $typ * h * g) as $float] as Self
-            }
-
-            #[inline]
-            fn from_time_and_gravity(t: Self, g: Self) -> Self {
-                -g * t
-            }
-        }
-    };
+/// Compute the vertical impulse from the peak height and the gravity
+#[inline]
+pub fn impulse_from_height_and_gravity<
+    N: 'static + NumOps + Copy + AsPrimitive<F>,
+    F: Float + AsPrimitive<N>,
+>(
+    h: N,
+    g: N,
+) -> N
+where
+    isize: AsPrimitive<N>,
+{
+    let f: F = (2.as_() * h * g).as_();
+    f.abs().sqrt().as_()
 }
 
-impl_impulse![f32   : f32];
-impl_impulse![f64   : f64];
-impl_impulse![i8    : f32];
-impl_impulse![i16   : f32];
-impl_impulse![i32   : f32];
-impl_impulse![i64   : f64];
-impl_impulse![i128  : f64];
-impl_impulse![isize : f64];
+/// Compute the vertical impulse from the time to reach the peak and the gravity
+#[inline]
+pub fn impulse_from_time_and_gravity<N: 'static + NumOps + Copy + Neg<Output = N>>(
+    t: N,
+    g: N,
+) -> N {
+    -g * t
+}
 
 #[cfg(test)]
 mod tests {
@@ -45,16 +41,16 @@ mod tests {
 
     #[test]
     fn test_from_h_t() {
-        assert_eq!(f32::from_height_and_time(20.0, 10.0), 4.0);
+        assert_eq!(impulse_from_height_and_time(20.0, 10.0), 4.0);
     }
 
     #[test]
     fn test_from_h_g() {
-        assert_eq!(i32::from_height_and_gravity(20, -1), 6);
+        assert_eq!(impulse_from_height_and_gravity::<i32, f32>(20, -1), 6);
     }
 
     #[test]
     fn test_from_t_g() {
-        assert_eq!(f32::from_time_and_gravity(10.0, -1.0), 10.0);
+        assert_eq!(impulse_from_time_and_gravity(10.0, -1.0), 10.0);
     }
 }

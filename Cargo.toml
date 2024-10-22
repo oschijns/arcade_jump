@@ -7,4 +7,4 @@ edition = "2021"
 
 
 [dependencies]
-libm = "0.2"
+num = "0.4"
