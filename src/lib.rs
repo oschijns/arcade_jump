@@ -12,6 +12,9 @@ pub mod impulse;
 /// Compute gravity
 pub mod gravity;
 
+/// Compute horizontal range
+pub mod horizontal;
+
 /// Compute parameters of a jump trajectory
 pub mod jump;
 
