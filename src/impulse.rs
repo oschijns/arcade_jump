@@ -1,13 +1,17 @@
 use core::ops::Neg;
-use num::{cast::AsPrimitive, traits::NumOps, Float};
+use num::{cast::AsPrimitive, traits::NumOps, Float, Zero};
 
 /// Compute the vertical impulse from the peak height and the time to reach the peak
 #[inline]
-pub fn impulse_from_height_and_time<N: 'static + NumOps + Copy>(h: N, t: N) -> N
+pub fn impulse_from_height_and_time<N: 'static + NumOps + Copy + Zero + Default>(h: N, t: N) -> N
 where
     isize: AsPrimitive<N>,
 {
-    2.as_() * h / t
+    if t.is_zero() {
+        N::default()
+    } else {
+        2.as_() * h / t
+    }
 }
 
 /// Compute the vertical impulse from the peak height and the gravity
@@ -42,6 +46,7 @@ mod tests {
     #[test]
     fn test_from_h_t() {
         assert_eq!(impulse_from_height_and_time(20.0, 10.0), 4.0);
+        assert_eq!(impulse_from_height_and_time(20, 0), 0);
     }
 
     #[test]

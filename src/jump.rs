@@ -1,10 +1,10 @@
 use crate::{gravity::*, height::*, impulse::*, time::*};
 use core::ops::Neg;
-use num::{cast::AsPrimitive, traits::NumOps, Float};
+use num::{cast::AsPrimitive, traits::NumOps, Float, Zero};
 
 /// Compute the vertical impulse and the gravity from the peak height and the time to reach the peak
 #[inline]
-pub fn from_height_and_time<N: 'static + NumOps + Copy>(h: N, t: N) -> (N, N)
+pub fn from_height_and_time<N: 'static + NumOps + Copy + Zero + Default>(h: N, t: N) -> (N, N)
 where
     isize: AsPrimitive<N>,
 {
@@ -15,7 +15,10 @@ where
 
 /// Compute the time to reach the peak and the gravity from the peak height and the vertical impulse
 #[inline]
-pub fn from_height_and_impulse<N: 'static + NumOps + Copy + Neg<Output = N>>(h: N, v: N) -> (N, N)
+pub fn from_height_and_impulse<N: 'static + NumOps + Copy + Zero + Default + Neg<Output = N>>(
+    h: N,
+    v: N,
+) -> (N, N)
 where
     isize: AsPrimitive<N>,
 {
@@ -27,7 +30,7 @@ where
 /// Compute the time to reach the peak and the vertical impulse from the peak height and the gravity
 #[inline]
 pub fn from_height_and_gravity<
-    N: 'static + NumOps + Copy + AsPrimitive<F>,
+    N: 'static + NumOps + Copy + Zero + Default + AsPrimitive<F>,
     F: Float + AsPrimitive<N>,
 >(
     h: N,
@@ -43,7 +46,10 @@ where
 
 /// Compute the peak height and the gravity from the time to reach the peak and the vertical impulse
 #[inline]
-pub fn from_time_and_impulse<N: 'static + NumOps + Copy + Neg<Output = N>>(t: N, v: N) -> (N, N)
+pub fn from_time_and_impulse<N: 'static + NumOps + Copy + Zero + Default + Neg<Output = N>>(
+    t: N,
+    v: N,
+) -> (N, N)
 where
     isize: AsPrimitive<N>,
 {
@@ -65,7 +71,10 @@ where
 
 /// Compute the peak height and the time to reach the peak from the vertical impulse and the gravity
 #[inline]
-pub fn from_impulse_and_gravity<N: 'static + NumOps + Copy + Neg<Output = N>>(v: N, g: N) -> (N, N)
+pub fn from_impulse_and_gravity<N: 'static + NumOps + Copy + Zero + Default + Neg<Output = N>>(
+    v: N,
+    g: N,
+) -> (N, N)
 where
     isize: AsPrimitive<N>,
 {
