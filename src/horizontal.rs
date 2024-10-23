@@ -40,12 +40,14 @@ mod tests {
     #[test]
     fn test_from_s_d() {
         assert_eq!(from_speed_and_range(1.0, 20.0), 10.0);
+        assert_eq!(from_speed_and_range(1, 20), 10);
         assert_eq!(from_speed_and_range(0, 20), 0);
     }
 
     #[test]
     fn test_from_s_d_r() {
         assert_eq!(from_speed_range_and_ratio(1.0, 25.0, 0.6), (15.0, 10.0));
+        assert_eq!(from_speed_range_and_ratio(1, 25, 0.6), (15, 10));
         assert_eq!(from_speed_range_and_ratio(0, 25, 0.6), (0, 0));
     }
 }
