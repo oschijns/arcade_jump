@@ -1,0 +1,15 @@
+[package]
+name = "arcade_jump"
+description = "Arcade jump trajectory configurator"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+
+[features]
+default = ["std"]
+
+# enable support for the standard library
+std = []
+
+[dependencies]
+const_soft_float = "0.1"

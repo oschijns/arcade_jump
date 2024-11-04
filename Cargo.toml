@@ -1,15 +1,9 @@
-[package]
+[workspace]
+members = ["arcade_jump", "arcade_jump_macros"]
+
+[workspace.package]
 name = "arcade_jump"
 description = "Arcade jump trajectory configurator"
 authors = ["Olivier Schyns <https://github.com/oschijns>"]
 version = "0.1.0"
 edition = "2021"
-
-[features]
-default = ["trajectory"]
-trajectory = [] # Provide a complete jump trajectory implementation
-
-
-[dependencies]
-num = { version = "0.4", default-features = false, features = ["libm"] }
-
