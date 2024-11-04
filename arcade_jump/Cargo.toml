@@ -13,3 +13,4 @@ std = []
 
 [dependencies]
 const_soft_float = "0.1"
+arcade_jump_macros = { path = "../arcade_jump_macros" }
