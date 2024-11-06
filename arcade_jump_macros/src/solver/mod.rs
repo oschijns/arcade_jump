@@ -1,10 +1,14 @@
-/// How to evaluate a parameter given two other parameters
+/// Input and output parameters
 mod parameter;
+
+/// Select the function
+mod select;
 
 /// How to read a statement
 mod statement;
 
 use proc_macro2::{token_stream::IntoIter, Punct, TokenStream, TokenTree};
+use quote::quote;
 use statement::Statement;
 use syn::{parse_str, Path, Type};
 
@@ -60,21 +64,27 @@ impl FloatType {
     }
 }
 
-/// Reorder the two elements
-trait Reorder {
-    fn reorder<'r>(&'r self, other: &'r Self) -> (&'r Self, &'r Self);
+/// Read a sequence of tokens to get the expected type
+pub(crate) trait ParseTokens: Sized {
+    fn parse(iter: &mut IntoIter) -> Result<Self, SolveError>;
 }
 
 /// Check if the next token is the specified punctuation
-fn check_punct(iter: &mut IntoIter, punct_char: char) -> Result<Punct, SolveError> {
+fn get_punct(iter: &mut IntoIter) -> Result<Punct, SolveError> {
     if let Some(TokenTree::Punct(punct)) = iter.next() {
-        if punct.as_char() == punct_char {
-            Ok(punct)
-        } else {
-            Err(SolveError::Syntax)
-        }
+        Ok(punct)
     } else {
         Err(SolveError::Syntax)
+    }
+}
+
+/// Return either `let` or `const` token
+#[inline]
+fn let_const_token(is_const: bool) -> TokenStream {
+    if is_const {
+        quote![const]
+    } else {
+        quote![let]
     }
 }
 
