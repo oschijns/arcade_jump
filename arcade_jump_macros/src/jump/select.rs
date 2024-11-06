@@ -1,9 +1,8 @@
 use super::{
     config::FloatType,
-    parameter::{ParameterInput, ParameterOutput},
+    parameter::{Parameter, ParameterInput, ParameterOutput, ParameterType},
     SolveError,
 };
-use crate::solver::parameter::{Parameter, ParameterType};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 
@@ -68,25 +67,26 @@ pub fn select_function(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use syn::parse_str;
+    use crate::jump::parameter::*;
+    use crate::jump::*;
 
     #[test]
     fn test_func_select() {
-        type Type = ParameterType;
-
         let float = FloatType::new(false, "f32", "::arcade_jump::jump_parameter::float32");
-        let res = Parameter::new("impulse", Type::Impulse);
-        let param1 = Parameter::new("time", Type::Time);
-        let param2 = Parameter::new("height", Type::Height);
+        let tokens1 = quote![ my_height  : Height  ];
+        let tokens2 = quote![ my_time    : Time    ];
+        let tokens3 = quote![ my_impulse : Impulse ];
 
-        let tokens = res
-            .select_function(false, &float, &param1, &param2)
-            .unwrap();
+        let my_height = ParameterInput::parse(&mut tokens1.into_iter()).unwrap();
+        let my_time = ParameterInput::parse(&mut tokens2.into_iter()).unwrap();
+        let my_impulse = ParameterOutput::parse(&mut tokens3.into_iter()).unwrap();
+
+        let tokens = select_function(&float, 0, &my_height, &my_time, &my_impulse).unwrap();
 
         assert_eq!(
             tokens.to_string(),
             quote![
-                let impulse: f32 = ::arcade_jump::jump_parameter::float32::impulse_from_height_and_time(height, time);
+                let my_impulse: f32 = ::arcade_jump::jump_parameter::float32::impulse_from_height_and_time(my_height, my_time);
             ]
             .to_string()
         );

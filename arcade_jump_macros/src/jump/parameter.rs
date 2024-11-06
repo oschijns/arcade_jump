@@ -262,12 +262,14 @@ mod tests {
         let tokens3 = quote![ my_impulse : Impulse ];
         let tokens4 = quote![ my_gravity : Gravity ];
 
-        let my_height = ParameterInput::parse(tokens1);
-    }
+        let my_height = ParameterInput::parse(&mut tokens1.into_iter()).unwrap();
+        let my_time = ParameterInput::parse(&mut tokens2.into_iter()).unwrap();
+        let my_impulse = ParameterInput::parse(&mut tokens3.into_iter()).unwrap();
+        let my_gravity = ParameterInput::parse(&mut tokens4.into_iter()).unwrap();
 
-    #[test]
-    fn test_parse_output() {
-        let param1 = Parameter::new("impulse", Type::Impulse);
-        let param2 = Parameter::new("gravity", Type::Gravity);
+        assert_eq!(my_height.get_ident(0).as_ref(), "my_height");
+        assert_eq!(my_time.get_ident(0).as_ref(), "my_time");
+        assert_eq!(my_impulse.get_ident(0).as_ref(), "my_impulse");
+        assert_eq!(my_gravity.get_ident(0).as_ref(), "my_gravity");
     }
 }

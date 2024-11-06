@@ -16,7 +16,7 @@ use proc_macro2::{token_stream::IntoIter, Ident, Punct, TokenStream, TokenTree};
 use statement::Statement;
 
 /// Parse token stream and generate instruction to compute variables
-pub(crate) fn generate_solver(tokens: TokenStream) -> Result<TokenStream, SolveError> {
+pub(crate) fn generate_calculator(tokens: TokenStream) -> Result<TokenStream, SolveError> {
     // read the stream of tokens
     let mut iter = tokens.into_iter();
 

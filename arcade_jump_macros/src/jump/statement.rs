@@ -28,8 +28,8 @@ impl ParseTokens for Statement {
     /// Parse a statement `ident:ident,ident:ident=>ident:ident` from a iterator over tokens
     fn parse(iter: &mut IntoIter) -> Result<Self, SolveError> {
         // We expect statements in the form:
-        // `height: my_height, time: my_time => impulse: my_impulse;`
-        // `height: my_height, time: my_time => impulse: my_impulse, gravity: my_gravity;`
+        // `my_height: Height, my_time: Time => my_impulse: Impulse;`
+        // `my_height: H, my_time: T => my_impulse: I, my_gravity: G;`
 
         // Read two inputs
         let input1 = ParameterInput::parse(iter)?;
