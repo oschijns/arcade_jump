@@ -1,10 +1,12 @@
 use super::{
+    check_punct,
+    config::FloatType,
     get_punct,
     parameter::{ParameterInput, ParameterOutput},
     select::select_function,
-    FloatType, ParseTokens, SolveError,
+    ParseTokens, SolveError,
 };
-use proc_macro2::{token_stream::IntoIter, Spacing, TokenStream};
+use proc_macro2::{token_stream::IntoIter, Spacing, TokenStream, TokenTree};
 use quote::quote;
 
 /// A statement taking two parameters and resulting into one or two other parameters
@@ -31,35 +33,30 @@ impl ParseTokens for Statement {
 
         // Read two inputs
         let input1 = ParameterInput::parse(iter)?;
-        if get_punct(iter)?.as_char() != ',' {
-            return Err(SolveError::Syntax);
-        }
+        let _ = check_punct(iter, ',')?;
         let input2 = ParameterInput::parse(iter)?;
 
         // verify that the two parts are separated by a "=>"
-        let arrow = get_punct(iter)?;
-        if arrow.as_char() == '=' && arrow.spacing() == Spacing::Joint {
-            if get_punct(iter)?.as_char() != '>' {
-                return Err(SolveError::Syntax);
-            }
+        let arrow = check_punct(iter, '=')?;
+        if arrow.spacing() == Spacing::Joint {
+            let _ = check_punct(iter, '>')?;
         } else {
-            return Err(SolveError::Syntax);
+            return Err(SolveError::Syntax(TokenTree::Punct(arrow)));
         }
 
         // Read a first output
         let output1 = ParameterOutput::parse(iter)?;
 
         // either there is a second output or we stop there
-        let output2 = match get_punct(iter)?.as_char() {
+        let punct = get_punct(iter)?;
+        let output2 = match punct.as_char() {
             ',' => {
                 let output = ParameterOutput::parse(iter)?;
-                if get_punct(iter)?.as_char() != ';' {
-                    return Err(SolveError::Syntax);
-                }
+                let _ = check_punct(iter, ';')?;
                 Some(output)
             }
             ';' => None,
-            _ => return Err(SolveError::Syntax),
+            _ => return Err(SolveError::Syntax(TokenTree::Punct(punct))),
         };
 
         // return a statement
@@ -76,28 +73,22 @@ impl Statement {
     /// Convert the statement to a token stream
     pub(crate) fn to_tokens(
         &self,
-        is_const: bool,
         float_type: &FloatType,
+        index: usize,
     ) -> Result<TokenStream, SolveError> {
         // evaluate the first output result
-        let out1 = select_function(
-            is_const,
-            float_type,
-            &self.input1,
-            &self.input2,
-            &self.output1,
-        )?;
+        let out1 = select_function(float_type, index, &self.input1, &self.input2, &self.output1)?;
 
         // evaluate the second output result
         let out2 = if let Some(output) = &self.output2 {
-            select_function(is_const, float_type, &self.input1, &self.input2, output)?
+            select_function(float_type, index, &self.input1, &self.input2, output)?
         } else {
             TokenStream::new()
         };
 
         // pre-evaluate the input variables (if necessary)
-        let in1 = self.input1.pre_evaluate(is_const, &float_type.float_type);
-        let in2 = self.input2.pre_evaluate(is_const, &float_type.float_type);
+        let in1 = self.input1.pre_evaluate(float_type, index);
+        let in2 = self.input2.pre_evaluate(float_type, index);
 
         Ok(quote![ #in1 #in2 #out1 #out2 ])
     }

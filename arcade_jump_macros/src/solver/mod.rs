@@ -1,3 +1,6 @@
+/// Which floating type number to use
+mod config;
+
 /// Input and output parameters
 mod parameter;
 
@@ -7,10 +10,10 @@ mod select;
 /// How to read a statement
 mod statement;
 
-use proc_macro2::{token_stream::IntoIter, Punct, TokenStream, TokenTree};
-use quote::quote;
+use config::FloatType;
+use parameter::{ParameterInput, ParameterOutput};
+use proc_macro2::{token_stream::IntoIter, Ident, Punct, TokenStream, TokenTree};
 use statement::Statement;
-use syn::{parse_str, Path, Type};
 
 /// Parse token stream and generate instruction to compute variables
 pub(crate) fn generate_solver(tokens: TokenStream) -> Result<TokenStream, SolveError> {
@@ -20,48 +23,49 @@ pub(crate) fn generate_solver(tokens: TokenStream) -> Result<TokenStream, SolveE
     // Collect the statements
     let mut statements = Vec::<Statement>::new();
 
+    // The first statement is the float type to use
+    let float = FloatType::parse(&mut iter)?;
+
     // Read all the statements
     loop {
         match Statement::parse(&mut iter) {
             Ok(stmt) => {
                 statements.push(stmt);
             }
-            Err(_) => {
+            Err(SolveError::End) => {
                 break;
+            }
+            Err(error) => {
+                return Err(error);
             }
         }
     }
 
     // Generate the statements
-    let float = FloatType::new(
-        parse_str("f32").unwrap(),
-        parse_str("::arcade_jump::jump_parameter::float32").unwrap(),
-    );
     let mut output = TokenStream::new();
-    for stmt in statements {
-        output.extend(stmt.to_tokens(false, &float)?);
+    for (index, stmt) in statements.iter().enumerate() {
+        output.extend(stmt.to_tokens(&float, index)?);
     }
 
     Ok(output)
 }
 
-/// Specify the float types (f32 or f64) and the module to use
-pub(crate) struct FloatType {
-    /// Primitive float type to use
-    float_type: Type,
+/// The type of errors encountered when parsing statements
+#[repr(u32)]
+#[derive(Debug)]
+pub(crate) enum SolveError {
+    /// End of the stream of tokens
+    End,
 
-    /// Path to the module containing the functions
-    module_path: Path,
-}
+    /// Error in the syntax
+    Syntax(TokenTree),
 
-impl FloatType {
-    /// Create a new float type
-    pub(crate) fn new(float_type: Type, module_path: Path) -> Self {
-        Self {
-            float_type,
-            module_path,
-        }
-    }
+    /// Error on the sequence of parameters
+    Parameter {
+        input1: ParameterInput,
+        input2: ParameterInput,
+        output: ParameterOutput,
+    },
 }
 
 /// Read a sequence of tokens to get the expected type
@@ -69,32 +73,46 @@ pub(crate) trait ParseTokens: Sized {
     fn parse(iter: &mut IntoIter) -> Result<Self, SolveError>;
 }
 
-/// Check if the next token is the specified punctuation
+/// Get the next token and expect it to be a punctuation
 fn get_punct(iter: &mut IntoIter) -> Result<Punct, SolveError> {
-    if let Some(TokenTree::Punct(punct)) = iter.next() {
+    if let Some(token) = iter.next() {
+        match token {
+            TokenTree::Punct(punct) => Ok(punct),
+            _ => Err(SolveError::Syntax(token)),
+        }
+    } else {
+        Err(SolveError::End)
+    }
+}
+
+/// Check if the next token is the specified punctuation
+fn check_punct(iter: &mut IntoIter, expect: char) -> Result<Punct, SolveError> {
+    let punct = get_punct(iter)?;
+    if punct.as_char() != expect {
+        Err(SolveError::Syntax(TokenTree::Punct(punct)))
+    } else {
         Ok(punct)
-    } else {
-        Err(SolveError::Syntax)
     }
 }
 
-/// Return either `let` or `const` token
-#[inline]
-fn let_const_token(is_const: bool) -> TokenStream {
-    if is_const {
-        quote![const]
+/// Get the next token and expect it to be a word
+fn get_word(iter: &mut IntoIter) -> Result<Ident, SolveError> {
+    if let Some(token) = iter.next() {
+        match token {
+            TokenTree::Ident(word) => Ok(word),
+            _ => Err(SolveError::Syntax(token)),
+        }
     } else {
-        quote![let]
+        Err(SolveError::End)
     }
 }
 
-/// The type of errors encountered when parsing statements
-#[repr(u32)]
-#[derive(Debug)]
-pub enum SolveError {
-    /// Error in the syntax
-    Syntax,
-
-    /// Error on a parameter
-    Parameter,
+/// Check if the next token is the specified word
+fn check_word(iter: &mut IntoIter, expect: &str) -> Result<Ident, SolveError> {
+    let word = get_word(iter)?;
+    if word != expect {
+        Err(SolveError::Syntax(TokenTree::Ident(word)))
+    } else {
+        Ok(word)
+    }
 }

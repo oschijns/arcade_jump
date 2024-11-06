@@ -1,13 +1,12 @@
-use super::{get_punct, let_const_token, ParseTokens, SolveError};
+use super::{check_punct, config::FloatType, ParseTokens, SolveError};
 use proc_macro2::{token_stream::IntoIter, Group, Ident, Literal, Span, TokenStream, TokenTree};
 use quote::quote;
 use std::borrow::Cow;
-use syn::Type;
 
 /// Parameter trait
 pub(crate) trait Parameter {
     /// Get the identifier for this parameter
-    fn get_ident(&self) -> Cow<'_, Ident>;
+    fn get_ident(&self, index: usize) -> Cow<'_, Ident>;
 
     /// Get the type of this parameter
     fn get_type(&self) -> ParameterType;
@@ -17,6 +16,7 @@ pub(crate) trait Parameter {
 }
 
 /// Input parameter which  and a type
+#[derive(Debug, Clone)]
 pub(crate) struct ParameterInput {
     /// Either a identifier, a literal or an expression
     variable_input: VariableInput,
@@ -26,6 +26,7 @@ pub(crate) struct ParameterInput {
 }
 
 /// Either an identifier, a literal or an expression
+#[derive(Debug, Clone)]
 pub(crate) enum VariableInput {
     /// Directly named variable
     Ident(Ident),
@@ -38,6 +39,7 @@ pub(crate) enum VariableInput {
 }
 
 /// Output parameter with a name and a type
+#[derive(Debug, Clone)]
 pub(crate) struct ParameterOutput {
     /// Name of the variable
     variable_name: Ident,
@@ -48,7 +50,7 @@ pub(crate) struct ParameterOutput {
 
 /// Parameter type
 #[repr(u32)]
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) enum ParameterType {
     /// Peak height
     Height = 0,
@@ -73,16 +75,14 @@ impl ParseTokens for ParameterInput {
 
         if let Some(token) = iter.next() {
             let variable_input = VariableInput::try_from(token)?;
-            if get_punct(iter)?.as_char() != ':' {
-                return Err(SolveError::Syntax);
-            }
+            let _ = check_punct(iter, ':')?;
             let parameter_type = ParameterType::parse(iter)?;
             Ok(Self {
                 variable_input,
                 parameter_type,
             })
         } else {
-            Err(SolveError::Syntax)
+            Err(SolveError::End)
         }
     }
 }
@@ -93,17 +93,19 @@ impl ParseTokens for ParameterOutput {
         // We expect statements in the form:
         // `my_impulse: Impulse`
 
-        if let Some(TokenTree::Ident(variable_name)) = iter.next() {
-            if get_punct(iter)?.as_char() != ':' {
-                return Err(SolveError::Syntax);
+        if let Some(token) = iter.next() {
+            if let TokenTree::Ident(variable_name) = token {
+                let _ = check_punct(iter, ':')?;
+                let parameter_type = ParameterType::parse(iter)?;
+                Ok(Self {
+                    variable_name,
+                    parameter_type,
+                })
+            } else {
+                Err(SolveError::Syntax(token))
             }
-            let parameter_type = ParameterType::parse(iter)?;
-            Ok(Self {
-                variable_name,
-                parameter_type,
-            })
         } else {
-            Err(SolveError::Syntax)
+            Err(SolveError::End)
         }
     }
 }
@@ -111,10 +113,14 @@ impl ParseTokens for ParameterOutput {
 impl ParseTokens for ParameterType {
     /// Parse an identifier from the token stream to deduce the parameter type
     fn parse(iter: &mut IntoIter) -> Result<Self, SolveError> {
-        if let Some(TokenTree::Ident(name)) = iter.next() {
-            Self::try_from(name.to_string().as_str())
+        if let Some(token) = iter.next() {
+            if let TokenTree::Ident(name) = token {
+                Self::try_from(name.to_string().as_str())
+            } else {
+                Err(SolveError::Syntax(token))
+            }
         } else {
-            Err(SolveError::Syntax)
+            Err(SolveError::End)
         }
     }
 }
@@ -128,7 +134,7 @@ impl TryFrom<TokenTree> for VariableInput {
             TokenTree::Literal(literal) => Ok(Self::Literal(literal)),
             TokenTree::Ident(ident) => Ok(Self::Ident(ident)),
             TokenTree::Group(group) => Ok(Self::Expr(group)),
-            _ => Err(SolveError::Syntax),
+            _ => Err(SolveError::Syntax(token)),
         }
     }
 }
@@ -137,30 +143,35 @@ impl TryFrom<TokenTree> for VariableInput {
 impl TryFrom<&str> for ParameterType {
     type Error = SolveError;
 
+    #[rustfmt::skip]
     fn try_from(name: &str) -> Result<Self, SolveError> {
         match name {
-            "H" | "Height" => Ok(Self::Height),
-            "T" | "Time" => Ok(Self::Time),
+            "H" | "Height"  => Ok(Self::Height ),
+            "T" | "Time"    => Ok(Self::Time   ),
             "I" | "Impulse" => Ok(Self::Impulse),
             "G" | "Gravity" => Ok(Self::Gravity),
-            _ => Err(SolveError::Syntax),
+            _ => Err(SolveError::Syntax(TokenTree::Ident(Ident::new(
+                name,
+                Span::call_site(),
+            )))),
         }
     }
 }
 
 impl ParameterInput {
     /// Preevaluate input expressions once
-    pub(crate) fn pre_evaluate(&self, is_const: bool, float: &Type) -> TokenStream {
+    pub(crate) fn pre_evaluate(&self, float_type: &FloatType, index: usize) -> TokenStream {
+        let let_const = float_type.let_const_token();
+        let float = float_type.get_float_type();
+
         match &self.variable_input {
             VariableInput::Ident(_) => TokenStream::new(),
             VariableInput::Literal(literal) => {
-                let let_const = let_const_token(is_const);
-                let param = self.get_ident().into_owned();
+                let param = self.get_ident(index).into_owned();
                 quote![ #let_const #param : #float = #literal as #float; ]
             }
             VariableInput::Expr(expr) => {
-                let let_const = let_const_token(is_const);
-                let param = self.get_ident().into_owned();
+                let param = self.get_ident(index).into_owned();
                 quote![ #let_const #param : #float = #expr as #float; ]
             }
         }
@@ -169,13 +180,15 @@ impl ParameterInput {
 
 impl Parameter for ParameterType {
     /// Get the identifier for this parameter
-    fn get_ident(&self) -> Cow<'_, Ident> {
-        match self {
-            Self::Height => Cow::Owned(Ident::new("__height", Span::call_site())),
-            Self::Time => Cow::Owned(Ident::new("__time", Span::call_site())),
-            Self::Impulse => Cow::Owned(Ident::new("__impulse", Span::call_site())),
-            Self::Gravity => Cow::Owned(Ident::new("__gravity", Span::call_site())),
-        }
+    #[rustfmt::skip]
+    fn get_ident(&self, index: usize) -> Cow<'_, Ident> {
+        let name = match self {
+            Self::Height  => "height" ,
+            Self::Time    => "time"   ,
+            Self::Impulse => "impulse",
+            Self::Gravity => "gravity",
+        };
+        Cow::Owned(Ident::new(&format!["__{}{}", name, index], Span::call_site()))
     }
 
     /// Get the type of this parameter
@@ -195,10 +208,10 @@ impl Parameter for ParameterType {
 
 impl Parameter for ParameterInput {
     /// Get the identifier for this parameter
-    fn get_ident(&self) -> Cow<'_, Ident> {
+    fn get_ident(&self, index: usize) -> Cow<'_, Ident> {
         match &self.variable_input {
             VariableInput::Ident(ident) => Cow::Borrowed(ident),
-            _ => self.parameter_type.get_ident(),
+            _ => self.parameter_type.get_ident(index),
         }
     }
 
@@ -219,7 +232,7 @@ impl Parameter for ParameterInput {
 
 impl Parameter for ParameterOutput {
     /// Get the identifier for this parameter
-    fn get_ident(&self) -> Cow<'_, Ident> {
+    fn get_ident(&self, _: usize) -> Cow<'_, Ident> {
         Cow::Borrowed(&self.variable_name)
     }
 
