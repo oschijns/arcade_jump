@@ -12,5 +12,5 @@ default = ["std"]
 std = []
 
 [dependencies]
-const_soft_float = "0.1"
+const_soft_float = { version = "0.1", features = ["no_std"] }
 arcade_jump_macros = { path = "../arcade_jump_macros" }

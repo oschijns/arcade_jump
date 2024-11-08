@@ -33,9 +33,9 @@ pub const fn time_from_height_and_impulse(height: f64, impulse: f64) -> f64 {
     }
 }
 
-/// Compute time to reach the peak from the peak height and the gravity (constant)
+/// Compute time to reach the peak from the peak height and the gravity
 #[inline]
-pub const fn time_from_height_and_gravity_const(height: f64, gravity: f64) -> f64 {
+pub const fn time_from_height_and_gravity(height: f64, gravity: f64) -> f64 {
     if gravity == 0.0 {
         f64::INFINITY
     } else {
@@ -44,6 +44,7 @@ pub const fn time_from_height_and_gravity_const(height: f64, gravity: f64) -> f6
     }
 }
 
+/*
 /// Compute time to reach the peak from the peak height and the gravity
 #[inline]
 pub fn time_from_height_and_gravity(height: f64, gravity: f64) -> f64 {
@@ -53,6 +54,7 @@ pub fn time_from_height_and_gravity(height: f64, gravity: f64) -> f64 {
         (2.0 * height / gravity).abs().sqrt()
     }
 }
+// */
 
 /// Compute time to reach the peak from the vertical impulse and the gravity
 #[inline]
@@ -74,18 +76,20 @@ pub const fn impulse_from_height_and_time(height: f64, time: f64) -> f64 {
     }
 }
 
-/// Compute the vertical impulse from the peak height and the gravity (constant)
+/// Compute the vertical impulse from the peak height and the gravity
 #[inline]
-pub const fn impulse_from_height_and_gravity_const(height: f64, gravity: f64) -> f64 {
+pub const fn impulse_from_height_and_gravity(height: f64, gravity: f64) -> f64 {
     let f = 2.0 * height * gravity;
     SoftF64(if f >= 0.0 { f } else { -f }).sqrt().to_f64()
 }
 
+/*
 /// Compute the vertical impulse from the peak height and the gravity
 #[inline]
 pub fn impulse_from_height_and_gravity(height: f64, gravity: f64) -> f64 {
     (2.0 * height * gravity).abs().sqrt()
 }
+// */
 
 /// Compute the vertical impulse from the time to reach the peak and the gravity
 #[inline]

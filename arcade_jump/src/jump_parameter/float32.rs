@@ -33,9 +33,9 @@ pub const fn time_from_height_and_impulse(height: f32, impulse: f32) -> f32 {
     }
 }
 
-/// Compute time to reach the peak from the peak height and the gravity (constant)
+/// Compute time to reach the peak from the peak height and the gravity
 #[inline]
-pub const fn time_from_height_and_gravity_const(height: f32, gravity: f32) -> f32 {
+pub const fn time_from_height_and_gravity(height: f32, gravity: f32) -> f32 {
     if gravity == 0.0 {
         f32::INFINITY
     } else {
@@ -44,6 +44,7 @@ pub const fn time_from_height_and_gravity_const(height: f32, gravity: f32) -> f3
     }
 }
 
+/*
 /// Compute time to reach the peak from the peak height and the gravity
 #[inline]
 pub fn time_from_height_and_gravity(height: f32, gravity: f32) -> f32 {
@@ -53,6 +54,7 @@ pub fn time_from_height_and_gravity(height: f32, gravity: f32) -> f32 {
         (2.0 * height / gravity).abs().sqrt()
     }
 }
+// */
 
 /// Compute time to reach the peak from the vertical impulse and the gravity
 #[inline]
@@ -74,18 +76,20 @@ pub const fn impulse_from_height_and_time(height: f32, time: f32) -> f32 {
     }
 }
 
-/// Compute the vertical impulse from the peak height and the gravity (constant)
+/// Compute the vertical impulse from the peak height and the gravity
 #[inline]
-pub const fn impulse_from_height_and_gravity_const(height: f32, gravity: f32) -> f32 {
+pub const fn impulse_from_height_and_gravity(height: f32, gravity: f32) -> f32 {
     let f = 2.0 * height * gravity;
     SoftF32(if f >= 0.0 { f } else { -f }).sqrt().to_f32()
 }
 
+/*
 /// Compute the vertical impulse from the peak height and the gravity
 #[inline]
 pub fn impulse_from_height_and_gravity(height: f32, gravity: f32) -> f32 {
     (2.0 * height * gravity).abs().sqrt()
 }
+// */
 
 /// Compute the vertical impulse from the time to reach the peak and the gravity
 #[inline]

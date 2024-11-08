@@ -1,4 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+#![feature(const_fn_floating_point_arithmetic)]
 
 /// Compute the trajectory of a jump
 pub mod jump_parameter;

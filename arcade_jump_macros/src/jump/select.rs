@@ -24,20 +24,12 @@ pub fn select_function(
     // figure out if the combination of parameter is valid
     #[rustfmt::skip]
     let func_name = match (ord1.get_type(), ord2.get_type(), output.get_type()) {
-        (Type::Height, Type::Time   , Type::Impulse) => Ok("impulse_from_height_and_time"    ),
-        (Type::Height, Type::Time   , Type::Gravity) => Ok("gravity_from_height_and_time"    ),
-        (Type::Height, Type::Impulse, Type::Time   ) => Ok("time_from_height_and_impulse"    ),
-        (Type::Height, Type::Impulse, Type::Gravity) => Ok("gravity_from_height_and_impulse" ),
-        (Type::Height, Type::Gravity, Type::Time   ) => Ok(if float_type.is_const() {
-            "time_from_height_and_gravity_const"
-        } else {
-            "time_from_height_and_gravity"
-        }),
-        (Type::Height, Type::Gravity, Type::Impulse) => Ok(if float_type.is_const() {
-            "impulse_from_height_and_gravity_const"
-        } else {
-            "impulse_from_height_and_gravity"
-        }),
+        (Type::Height , Type::Time   , Type::Impulse) => Ok("impulse_from_height_and_time"   ),
+        (Type::Height , Type::Time   , Type::Gravity) => Ok("gravity_from_height_and_time"   ),
+        (Type::Height , Type::Impulse, Type::Time   ) => Ok("time_from_height_and_impulse"   ),
+        (Type::Height , Type::Impulse, Type::Gravity) => Ok("gravity_from_height_and_impulse"),
+        (Type::Height , Type::Gravity, Type::Time   ) => Ok("time_from_height_and_gravity"   ),
+        (Type::Height , Type::Gravity, Type::Impulse) => Ok("impulse_from_height_and_gravity"),
         (Type::Time   , Type::Impulse, Type::Height ) => Ok("height_from_time_and_impulse"   ),
         (Type::Time   , Type::Impulse, Type::Gravity) => Ok("gravity_from_time_and_impulse"  ),
         (Type::Time   , Type::Gravity, Type::Height ) => Ok("height_from_time_and_gravity"   ),
