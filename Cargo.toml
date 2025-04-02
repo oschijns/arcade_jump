@@ -5,5 +5,5 @@ members = ["arcade_jump", "arcade_jump_macros"]
 name = "arcade_jump"
 description = "Arcade jump trajectory configurator"
 authors = ["Olivier Schyns <https://github.com/oschijns>"]
-version = "0.1.0"
-edition = "2021"
+version = "0.1.1"
+edition = "2024"
