@@ -240,7 +240,7 @@ mod tests {
         const HEIGHT: f32 = 20.0;
         const TIME: f32 = 10.0;
 
-        let impulse: f32 = impulse_from_height_and_time(HEIGHT, TIME).unwrap();
+        let impulse = impulse_from_height_and_time::<f32>(HEIGHT, TIME).unwrap();
         let gravity: f32 = gravity_from_height_and_time(HEIGHT, TIME).unwrap();
         let time2: f32 = time_from_height_and_gravity(20.0, gravity).unwrap();
 

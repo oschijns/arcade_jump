@@ -1,12 +1,11 @@
 use super::{
-    check_punct,
+    ParseTokens, SolveError, check_punct,
     config::FloatType,
     get_punct,
     parameter::{ParameterInput, ParameterOutput},
     select::select_function,
-    ParseTokens, SolveError,
 };
-use proc_macro2::{token_stream::IntoIter, Spacing, TokenStream, TokenTree};
+use proc_macro2::{Spacing, TokenStream, TokenTree, token_stream::IntoIter};
 use quote::quote;
 
 /// A statement taking two parameters and resulting into one or two other parameters

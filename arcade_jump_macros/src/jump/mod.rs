@@ -12,7 +12,7 @@ mod statement;
 
 use config::FloatType;
 use parameter::{ParameterInput, ParameterOutput};
-use proc_macro2::{token_stream::IntoIter, Ident, Punct, TokenStream, TokenTree};
+use proc_macro2::{Ident, Punct, TokenStream, TokenTree, token_stream::IntoIter};
 use statement::Statement;
 
 /// Parse token stream and generate instruction to compute variables

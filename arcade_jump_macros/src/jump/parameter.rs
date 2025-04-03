@@ -1,5 +1,5 @@
-use super::{check_punct, config::FloatType, ParseTokens, SolveError};
-use proc_macro2::{token_stream::IntoIter, Group, Ident, Literal, Span, TokenStream, TokenTree};
+use super::{ParseTokens, SolveError, check_punct, config::FloatType};
+use proc_macro2::{Group, Ident, Literal, Span, TokenStream, TokenTree, token_stream::IntoIter};
 use quote::quote;
 use std::borrow::Cow;
 

@@ -1,8 +1,8 @@
-use proc_macro2::{token_stream::IntoIter, TokenStream, TokenTree};
+use proc_macro2::{TokenStream, TokenTree, token_stream::IntoIter};
 use quote::quote;
-use syn::{parse_str, Path, Type};
+use syn::{Type, parse_str};
 
-use super::{check_punct, check_word, get_word, ParseTokens, SolveError};
+use super::{ParseTokens, SolveError, check_punct, check_word, get_word};
 
 /// Specify the float types (f32 or f64) and the module to use
 pub(crate) struct FloatType {
@@ -11,18 +11,14 @@ pub(crate) struct FloatType {
 
     /// Primitive float type to use
     float_type: Type,
-
-    /// Path to the module containing the functions
-    module_path: Path,
 }
 
 impl FloatType {
     /// Create a new float type
-    pub(crate) fn new(is_const: bool, float_type: &str, module_path: &str) -> Self {
+    pub(crate) fn new(is_const: bool, float_type: &str) -> Self {
         Self {
             is_const,
             float_type: parse_str(float_type).unwrap(),
-            module_path: parse_str(module_path).unwrap(),
         }
     }
 
@@ -46,12 +42,6 @@ impl FloatType {
     #[inline]
     pub(crate) fn get_float_type(&self) -> &Type {
         &self.float_type
-    }
-
-    /// Path to the module containing the functions
-    #[inline]
-    pub(crate) fn get_module_path(&self) -> &Path {
-        &self.module_path
     }
 }
 
@@ -79,16 +69,8 @@ impl ParseTokens for FloatType {
 
         // evaluate the float type to use
         match word.to_string().as_str() {
-            "f32" => Ok(Self::new(
-                is_const,
-                "f32",
-                "::arcade_jump::jump_parameter::float32",
-            )),
-            "f64" => Ok(Self::new(
-                is_const,
-                "f64",
-                "::arcade_jump::jump_parameter::float64",
-            )),
+            "f32" => Ok(Self::new(is_const, "f32")),
+            "f64" => Ok(Self::new(is_const, "f64")),
             _ => Err(SolveError::Syntax(TokenTree::Ident(word))),
         }
     }

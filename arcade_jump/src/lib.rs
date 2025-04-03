@@ -5,4 +5,4 @@
 //pub mod jump_parameter;
 
 // Contains functions to resolve the value of a parameter given two other parameters
-mod resolver;
+pub mod resolver;

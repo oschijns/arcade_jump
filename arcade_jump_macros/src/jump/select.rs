@@ -1,7 +1,7 @@
 use super::{
+    SolveError,
     config::FloatType,
     parameter::{Parameter, ParameterInput, ParameterOutput, ParameterType},
-    SolveError,
 };
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
@@ -46,14 +46,14 @@ pub fn select_function(
     // prepare the tokens
     let eval = float_type.let_const_token();
     let result = output.get_ident(index).into_owned();
-    let float = float_type.get_float_type();
-    let path = float_type.get_module_path();
+    let num_type = float_type.get_float_type();
     let func = Ident::new(func_name, Span::call_site());
     let var1 = ord1.get_ident(index).into_owned();
     let var2 = ord2.get_ident(index).into_owned();
 
     // generate the statement
-    Ok(quote![#eval #result: #float = #path::#func(#var1, #var2);])
+    Ok(quote![
+        #eval #result = ::arcade_jump::resolver::#func::<#num_type>(#var1, #var2)?;])
 }
 
 #[cfg(test)]
@@ -64,7 +64,7 @@ mod tests {
 
     #[test]
     fn test_func_select() {
-        let float = FloatType::new(false, "f32", "::arcade_jump::jump_parameter::float32");
+        let float = FloatType::new(false, "f32");
         let tokens1 = quote![ my_height  : Height  ];
         let tokens2 = quote![ my_time    : Time    ];
         let tokens3 = quote![ my_impulse : Impulse ];
@@ -78,7 +78,7 @@ mod tests {
         assert_eq!(
             tokens.to_string(),
             quote![
-                let my_impulse: f32 = ::arcade_jump::jump_parameter::float32::impulse_from_height_and_time(my_height, my_time);
+                let my_impulse = ::arcade_jump::resolver::impulse_from_height_and_time::<f32>(my_height, my_time)?;
             ]
             .to_string()
         );
