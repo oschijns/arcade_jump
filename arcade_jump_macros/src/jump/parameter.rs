@@ -1,12 +1,13 @@
-use super::{ParseTokens, SolveError, check_punct, config::FloatType};
-use proc_macro2::{Group, Ident, Literal, Span, TokenStream, TokenTree, token_stream::IntoIter};
-use quote::quote;
-use std::borrow::Cow;
+use super::{CompError, ParseTokens};
+use alloc::string::ToString;
+use core::fmt;
+use proc_macro2::{Ident, Span, TokenStream, TokenTree, token_stream::IntoIter};
+use quote::{ToTokens, quote};
 
 /// Parameter trait
 pub(crate) trait Parameter {
     /// Get the identifier for this parameter
-    fn get_ident(&self, index: usize) -> Cow<'_, Ident>;
+    fn get_ident(&self) -> Ident;
 
     /// Get the type of this parameter
     fn get_type(&self) -> ParameterType;
@@ -15,35 +16,19 @@ pub(crate) trait Parameter {
     fn reorder<'r>(&'r self, other: &'r Self) -> (&'r Self, &'r Self);
 }
 
-/// Input parameter which  and a type
+/// Input parameter
 #[derive(Debug, Clone)]
 pub(crate) struct ParameterInput {
-    /// Either a identifier, a literal or an expression
-    variable_input: VariableInput,
-
     /// Type of the parameter
     parameter_type: ParameterType,
+
+    /// The expression provided as the parameter
+    expression_input: TokenStream,
 }
 
-/// Either an identifier, a literal or an expression
-#[derive(Debug, Clone)]
-pub(crate) enum VariableInput {
-    /// Directly named variable
-    Ident(Ident),
-
-    /// Literal
-    Literal(Literal),
-
-    /// Expression
-    Expr(Group),
-}
-
-/// Output parameter with a name and a type
+/// Output parameter
 #[derive(Debug, Clone)]
 pub(crate) struct ParameterOutput {
-    /// Name of the variable
-    variable_name: Ident,
-
     /// Type of the parameter
     parameter_type: ParameterType,
 }
@@ -67,90 +52,73 @@ pub(crate) enum ParameterType {
 
 impl ParseTokens for ParameterInput {
     /// Parse `ident:ident` from the token stream to deduce a parameter
-    fn parse(iter: &mut IntoIter) -> Result<Self, SolveError> {
+    fn parse(iter: &mut IntoIter) -> Result<Self, CompError> {
         // We expect statements in the form:
-        // `my_height: Height`
-        // `40.0: Height`
-        // `(my_height * 2.0): H`
+        // `Height(my_height)`
+        // `H(40.0)`
 
-        if let Some(token) = iter.next() {
-            let variable_input = VariableInput::try_from(token)?;
-            let _ = check_punct(iter, ':')?;
-            let parameter_type = ParameterType::parse(iter)?;
-            Ok(Self {
-                variable_input,
-                parameter_type,
-            })
+        let parameter_type = ParameterType::parse(iter)?;
+        let expression_input = if let Some(token) = iter.next() {
+            match token {
+                TokenTree::Group(group) => group.stream(),
+                _ => return Err(CompError::InvalidExpr(token)),
+            }
         } else {
-            Err(SolveError::End)
-        }
+            return Err(CompError::Missing);
+        };
+        Ok(Self {
+            parameter_type,
+            expression_input,
+        })
     }
 }
 
 impl ParseTokens for ParameterOutput {
-    /// Parse `ident:ident` from the token stream to deduce a parameter
-    fn parse(iter: &mut IntoIter) -> Result<Self, SolveError> {
-        // We expect statements in the form:
-        // `my_impulse: Impulse`
-
-        if let Some(token) = iter.next() {
-            if let TokenTree::Ident(variable_name) = token {
-                let _ = check_punct(iter, ':')?;
-                let parameter_type = ParameterType::parse(iter)?;
-                Ok(Self {
-                    variable_name,
-                    parameter_type,
-                })
-            } else {
-                Err(SolveError::Syntax(token))
-            }
-        } else {
-            Err(SolveError::End)
-        }
+    /// Parse an identifier from the token stream to deduce the parameter type
+    fn parse(iter: &mut IntoIter) -> Result<Self, CompError> {
+        let parameter_type = ParameterType::parse(iter)?;
+        Ok(Self { parameter_type })
     }
 }
 
 impl ParseTokens for ParameterType {
     /// Parse an identifier from the token stream to deduce the parameter type
-    fn parse(iter: &mut IntoIter) -> Result<Self, SolveError> {
+    fn parse(iter: &mut IntoIter) -> Result<Self, CompError> {
         if let Some(token) = iter.next() {
             if let TokenTree::Ident(name) = token {
                 Self::try_from(name.to_string().as_str())
             } else {
-                Err(SolveError::Syntax(token))
+                Err(CompError::InvalidType(token))
             }
         } else {
-            Err(SolveError::End)
+            Err(CompError::Missing)
         }
     }
 }
 
-/// How is the input variable defined ?
-impl TryFrom<TokenTree> for VariableInput {
-    type Error = SolveError;
-
-    fn try_from(token: TokenTree) -> Result<Self, SolveError> {
-        match token {
-            TokenTree::Literal(literal) => Ok(Self::Literal(literal)),
-            TokenTree::Ident(ident) => Ok(Self::Ident(ident)),
-            TokenTree::Group(group) => Ok(Self::Expr(group)),
-            _ => Err(SolveError::Syntax(token)),
+impl ToTokens for ParameterType {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            Self::Height => tokens.extend(quote![Height]),
+            Self::Time => tokens.extend(quote![Time]),
+            Self::Impulse => tokens.extend(quote![Impulse]),
+            Self::Gravity => tokens.extend(quote![Gravity]),
         }
     }
 }
 
 /// Identify the parameter
 impl TryFrom<&str> for ParameterType {
-    type Error = SolveError;
+    type Error = CompError;
 
     #[rustfmt::skip]
-    fn try_from(name: &str) -> Result<Self, SolveError> {
+    fn try_from(name: &str) -> Result<Self, CompError> {
         match name {
             "H" | "Height"  => Ok(Self::Height ),
             "T" | "Time"    => Ok(Self::Time   ),
             "I" | "Impulse" => Ok(Self::Impulse),
             "G" | "Gravity" => Ok(Self::Gravity),
-            _ => Err(SolveError::Syntax(TokenTree::Ident(Ident::new(
+            _ => Err(CompError::InvalidType(TokenTree::Ident(Ident::new(
                 name,
                 Span::call_site(),
             )))),
@@ -160,20 +128,15 @@ impl TryFrom<&str> for ParameterType {
 
 impl ParameterInput {
     /// Preevaluate input expressions once
-    pub(crate) fn pre_evaluate(&self, float_type: &FloatType, index: usize) -> TokenStream {
-        let let_const = float_type.let_const_token();
-        let float = float_type.get_float_type();
+    pub(crate) fn pre_evaluate(&self, enforce_type: bool) -> TokenStream {
+        let param = self.get_ident();
+        let expr = &self.expression_input;
 
-        match &self.variable_input {
-            VariableInput::Ident(_) => TokenStream::new(),
-            VariableInput::Literal(literal) => {
-                let param = self.get_ident(index).into_owned();
-                quote![ #let_const #param : #float = #literal as #float; ]
-            }
-            VariableInput::Expr(expr) => {
-                let param = self.get_ident(index).into_owned();
-                quote![ #let_const #param : #float = #expr as #float; ]
-            }
+        // either the type is enforced or it is not
+        if enforce_type {
+            quote![ let #param = (#expr) as __Num; ]
+        } else {
+            quote![ let #param = #expr; ]
         }
     }
 }
@@ -181,14 +144,19 @@ impl ParameterInput {
 impl Parameter for ParameterType {
     /// Get the identifier for this parameter
     #[rustfmt::skip]
-    fn get_ident(&self, index: usize) -> Cow<'_, Ident> {
+    fn get_ident(&self) -> Ident {
+        static HEIGHT  : &str = "__height" ;
+        static TIME    : &str = "__time"   ;
+        static IMPULSE : &str = "__impulse";
+        static GRAVITY : &str = "__gravity";
+
         let name = match self {
-            Self::Height  => "height" ,
-            Self::Time    => "time"   ,
-            Self::Impulse => "impulse",
-            Self::Gravity => "gravity",
+            Self::Height  => HEIGHT,
+            Self::Time    => TIME,
+            Self::Impulse => IMPULSE,
+            Self::Gravity => GRAVITY,
         };
-        Cow::Owned(Ident::new(&format!["__{}{}", name, index], Span::call_site()))
+        Ident::new(name, Span::call_site())
     }
 
     /// Get the type of this parameter
@@ -208,11 +176,8 @@ impl Parameter for ParameterType {
 
 impl Parameter for ParameterInput {
     /// Get the identifier for this parameter
-    fn get_ident(&self, index: usize) -> Cow<'_, Ident> {
-        match &self.variable_input {
-            VariableInput::Ident(ident) => Cow::Borrowed(ident),
-            _ => self.parameter_type.get_ident(index),
-        }
+    fn get_ident(&self) -> Ident {
+        self.parameter_type.get_ident()
     }
 
     /// Get the type of this parameter
@@ -232,8 +197,8 @@ impl Parameter for ParameterInput {
 
 impl Parameter for ParameterOutput {
     /// Get the identifier for this parameter
-    fn get_ident(&self, _: usize) -> Cow<'_, Ident> {
-        Cow::Borrowed(&self.variable_name)
+    fn get_ident(&self) -> Ident {
+        Ident::new("__result", Span::call_site())
     }
 
     /// Get the type of this parameter
@@ -251,25 +216,48 @@ impl Parameter for ParameterOutput {
     }
 }
 
+impl fmt::Display for ParameterInput {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.get_type())
+    }
+}
+
+impl fmt::Display for ParameterOutput {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.get_type())
+    }
+}
+
+impl fmt::Display for ParameterType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Height => write!(f, "Height"),
+            Self::Time => write!(f, "Time"),
+            Self::Impulse => write!(f, "Impulse"),
+            Self::Gravity => write!(f, "Gravity"),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_parse_input() {
-        let tokens1 = quote![ my_height  : Height  ];
-        let tokens2 = quote![ my_time    : Time    ];
-        let tokens3 = quote![ my_impulse : Impulse ];
-        let tokens4 = quote![ my_gravity : Gravity ];
+        let tokens1 = quote![Height(my_height)];
+        let tokens2 = quote![Time(my_time)];
+        let tokens3 = quote![Impulse(my_impulse)];
+        let tokens4 = quote![Gravity(my_gravity)];
 
         let my_height = ParameterInput::parse(&mut tokens1.into_iter()).unwrap();
         let my_time = ParameterInput::parse(&mut tokens2.into_iter()).unwrap();
         let my_impulse = ParameterInput::parse(&mut tokens3.into_iter()).unwrap();
         let my_gravity = ParameterInput::parse(&mut tokens4.into_iter()).unwrap();
 
-        assert_eq!(my_height.get_ident(0).as_ref(), "my_height");
-        assert_eq!(my_time.get_ident(0).as_ref(), "my_time");
-        assert_eq!(my_impulse.get_ident(0).as_ref(), "my_impulse");
-        assert_eq!(my_gravity.get_ident(0).as_ref(), "my_gravity");
+        assert_eq!(my_height.get_ident(), "__height");
+        assert_eq!(my_time.get_ident(), "__time");
+        assert_eq!(my_impulse.get_ident(), "__impulse");
+        assert_eq!(my_gravity.get_ident(), "__gravity");
     }
 }

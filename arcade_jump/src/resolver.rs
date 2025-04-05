@@ -18,6 +18,19 @@ pub enum ResolveError {
     Gravity,
 }
 
+/// Specify the error encountered when resolving the parameters
+#[derive(Debug, Error)]
+pub enum DistError {
+    #[error("Time to reach the distance cannot be null")]
+    Time,
+
+    #[error("Distance cannot be null")]
+    Range,
+
+    #[error("Horizontal speed cannot be null")]
+    Speed,
+}
+
 /// Compute the peak height from the time to reach the peak and the vertical impulse
 #[inline]
 pub fn height_from_time_and_impulse<N>(time: N, impulse: N) -> Result<N, ResolveError>
@@ -171,12 +184,12 @@ where
 
 /// Compute the time to reach the peak from the horizontal speed and the range
 #[inline]
-pub fn time_from_speed_and_range<N>(speed: N, range: N) -> Result<N, ()>
+pub fn time_from_speed_and_range<N>(speed: N, range: N) -> Result<N, DistError>
 where
     N: Zero + ConstOne + Add<Output = N> + Div<Output = N> + Div<Output = N>,
 {
     if speed.is_zero() {
-        Err(())
+        Err(DistError::Speed)
     } else {
         Ok(halve(range) / speed)
     }
@@ -184,7 +197,11 @@ where
 
 /// Compute the time to reach the peak from the horizontal speed, the range and an arbitrary ratio
 #[inline]
-pub fn time_from_speed_and_range_with_ratio<N>(speed: N, range: N, ratio: N) -> Result<(N, N), ()>
+pub fn time_from_speed_and_range_with_ratio<N>(
+    speed: N,
+    range: N,
+    ratio: N,
+) -> Result<(N, N), DistError>
 where
     N: Copy
         + Zero
@@ -195,7 +212,7 @@ where
         + Div<Output = N>,
 {
     if speed.is_zero() {
-        Err(())
+        Err(DistError::Speed)
     } else {
         let time = halve(range) / speed;
         Ok((time * ratio, time * (N::ONE - ratio)))

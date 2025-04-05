@@ -1,6 +1,5 @@
 use super::{
-    SolveError,
-    config::FloatType,
+    CompError,
     parameter::{Parameter, ParameterInput, ParameterOutput, ParameterType},
 };
 use proc_macro2::{Ident, Span, TokenStream};
@@ -9,12 +8,11 @@ use quote::quote;
 /// Select the function that will give the result for
 /// this parameter type given the two other parameter.
 pub fn select_function(
-    float_type: &FloatType,
-    index: usize,
+    enforce_type: bool,
     param1: &ParameterInput,
     param2: &ParameterInput,
     output: &ParameterOutput,
-) -> Result<TokenStream, SolveError> {
+) -> Result<TokenStream, CompError> {
     // find the appropriate function to call
     type Type = ParameterType;
 
@@ -36,7 +34,7 @@ pub fn select_function(
         (Type::Time   , Type::Gravity, Type::Impulse) => Ok("impulse_from_time_and_gravity"  ),
         (Type::Impulse, Type::Gravity, Type::Height ) => Ok("height_from_impulse_and_gravity"),
         (Type::Impulse, Type::Gravity, Type::Time   ) => Ok("time_from_impulse_and_gravity"  ),
-        _ => Err(SolveError::Parameter {
+        _ => Err(CompError::InvalidCombination {
             input1: param1.clone(),
             input2: param2.clone(),
             output: output.clone(),
@@ -44,16 +42,21 @@ pub fn select_function(
     }?;
 
     // prepare the tokens
-    let eval = float_type.let_const_token();
-    let result = output.get_ident(index).into_owned();
-    let num_type = float_type.get_float_type();
     let func = Ident::new(func_name, Span::call_site());
-    let var1 = ord1.get_ident(index).into_owned();
-    let var2 = ord2.get_ident(index).into_owned();
+    let var1 = ord1.get_ident();
+    let var2 = ord2.get_ident();
 
     // generate the statement
-    Ok(quote![
-        #eval #result = ::arcade_jump::resolver::#func::<#num_type>(#var1, #var2)?;])
+    let stmt = if enforce_type {
+        quote![
+            ::arcade_jump::resolver::#func::<__Num>(#var1, #var2)
+        ]
+    } else {
+        quote![
+            ::arcade_jump::resolver::#func(#var1, #var2)
+        ]
+    };
+    Ok(stmt)
 }
 
 #[cfg(test)]
@@ -61,24 +64,24 @@ mod tests {
     use super::*;
     use crate::jump::parameter::*;
     use crate::jump::*;
+    use alloc::string::ToString;
 
     #[test]
     fn test_func_select() {
-        let float = FloatType::new(false, "f32");
-        let tokens1 = quote![ my_height  : Height  ];
-        let tokens2 = quote![ my_time    : Time    ];
-        let tokens3 = quote![ my_impulse : Impulse ];
+        let tokens1 = quote![Height(my_height)];
+        let tokens2 = quote![Time(0.5)];
+        let tokens3 = quote![I(3 + 5)];
 
         let my_height = ParameterInput::parse(&mut tokens1.into_iter()).unwrap();
         let my_time = ParameterInput::parse(&mut tokens2.into_iter()).unwrap();
         let my_impulse = ParameterOutput::parse(&mut tokens3.into_iter()).unwrap();
 
-        let tokens = select_function(&float, 0, &my_height, &my_time, &my_impulse).unwrap();
+        let tokens = select_function(true, &my_height, &my_time, &my_impulse).unwrap();
 
         assert_eq!(
             tokens.to_string(),
             quote![
-                let my_impulse = ::arcade_jump::resolver::impulse_from_height_and_time::<f32>(my_height, my_time)?;
+                ::arcade_jump::resolver::impulse_from_height_and_time::<__Num>(__height, __time)
             ]
             .to_string()
         );

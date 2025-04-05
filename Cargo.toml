@@ -1,8 +1,8 @@
 [workspace]
 members = ["arcade_jump", "arcade_jump_macros"]
+resolver = "3"
 
 [workspace.package]
-name = "arcade_jump"
 description = "Arcade jump trajectory configurator"
 authors = ["Olivier Schyns <https://github.com/oschijns>"]
 version = "0.1.1"
