@@ -1,6 +1,10 @@
 [package]
 name = "arcade_jump"
 description = "Arcade jump trajectory configurator"
+keywords.workspace = true
+categories.workspace = true
+repository.workspace = true
+license.workspace = true
 authors.workspace = true
 version.workspace = true
 edition.workspace = true
@@ -15,4 +19,4 @@ std = ["num-traits/std", "thiserror/std"]
 num-traits = { version = "0.2", default-features = false }
 thiserror = { version = "2.0", default-features = false }
 lazy_static = { version = "1.5", features = ["spin_no_std"] }
-arcade_jump_macros = { path = "../arcade_jump_macros" }
+arcade_jump_macros = "0.0.1"
