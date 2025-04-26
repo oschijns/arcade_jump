@@ -53,26 +53,27 @@ The macro will take care of identifying the type of each of the parameters and f
 ```rust
 use arcade_jump::{resolver::ResolveError, macros::compute};
 
-fn main() -> Result<(), ResolveError>
-// I want to define a jump trajectory of 20 units in height and 2 seconds to reach that height.
-let my_height = 20.0f32;
-let my_time = 2.0f32;
+fn main() -> Result<(), ResolveError> {
+    // I want to define a jump trajectory of 20 units in height and 2 seconds to reach that height.
+    let my_height = 20.0f32;
+    let my_time = 2.0f32;
 
-// Let's compute the vertical initial velocity and the gravity.
-// As long as they are properly identified, the order of the parameters does not matter.
-// We can also enforce a numeric type by using the `as` keyword.
-let (my_impulse, my_gravity) = compute!(Height(my_height), Time(my_time) => Impulse, Gravity as f32)?;
+    // Let's compute the vertical initial velocity and the gravity.
+    // As long as they are properly identified, the order of the parameters does not matter.
+    // We can also enforce a numeric type by using the `as` keyword.
+    let (my_impulse, my_gravity) = compute!(Height(my_height), Time(my_time) => Impulse, Gravity as f32)?;
 
-// Let's compute a variation of this jump where the player will reach
-// a height half as high by releasing the jump button earlier.
-// Here the initial vertical velocity is the same for both jump variations,
-// but we define the peak height as being half of the original height.
-// This means that the gravity will be stronger.
-// This is unrealistic but this is how jumps are implemented in most games.
-let my_gravity2 = compute!(Impulse(my_impulse), Height(my_height / 2) => Gravity)?;
+    // Let's compute a variation of this jump where the player will reach
+    // a height half as high by releasing the jump button earlier.
+    // Here the initial vertical velocity is the same for both jump variations,
+    // but we define the peak height as being half of the original height.
+    // This means that the gravity will be stronger.
+    // This is unrealistic but this is how jumps are implemented in most games.
+    let my_gravity2 = compute!(Impulse(my_impulse), Height(my_height / 2) => Gravity)?;
 
-// If we want to implement a double jump, we can pick a new height
-// and the initial gravity and compute a new vertical impulse.
-// This time we use shorthands of the four parameters types.
-let my_impulse2 = compute!(G(my_gravity2), H(my_height / 3) => I)?;
+    // If we want to implement a double jump, we can pick a new height
+    // and the initial gravity and compute a new vertical impulse.
+    // This time we use shorthands of the four parameters types.
+    let my_impulse2 = compute!(G(my_gravity2), H(my_height / 3) => I)?;
+}
 ```

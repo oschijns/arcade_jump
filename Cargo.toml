@@ -9,5 +9,4 @@ keywords = ["game", "jump", "ballistic", "mathematics"]
 categories = ["game-engines", "no-std"]
 repository = "https://github.com/oschijns/arcade_jump"
 license = "MIT"
-version = "0.0.1"
 edition = "2024"

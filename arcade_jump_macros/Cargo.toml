@@ -1,12 +1,12 @@
 [package]
 name = "arcade_jump_macros"
 description = "Arcade jump trajectory configurator macros module"
+version = "0.0.1"
 keywords.workspace = true
 categories.workspace = true
 repository.workspace = true
 license.workspace = true
 authors.workspace = true
-version.workspace = true
 edition.workspace = true
 
 [lib]
