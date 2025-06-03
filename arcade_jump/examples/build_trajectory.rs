@@ -1,12 +1,12 @@
-use arcade_jump::{macros::compute, resolver::ResolveError};
+use arcade_jump::{Error, compute};
 
-fn main() -> Result<(), ResolveError> {
+fn main() -> Result<(), Error> {
     runtime_evaluate()?;
     Ok(())
 }
 
 /// Evaluate values at runtime
-fn runtime_evaluate() -> Result<(), ResolveError> {
+fn runtime_evaluate() -> Result<(), Error> {
     let my_height: f32 = 20.0;
     let my_time: f32 = 10.0;
 

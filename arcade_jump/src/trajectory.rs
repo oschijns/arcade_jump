@@ -1,4 +1,4 @@
-use crate::resolver::*;
+use crate::resolver::{error::Error, nofailure, *};
 use core::ops::{Add, Div, Mul, Neg};
 use num_traits::{ConstOne, Float, Zero};
 
@@ -49,7 +49,7 @@ where
     N: Copy + Zero + Neg<Output = N> + Add<Output = N> + Mul<Output = N> + Div<Output = N>,
 {
     /// Construct a trajectory from the height of the peak and the time to reach that peak
-    pub fn from_height_and_time(height: N, time: N) -> Result<Self, ResolveError> {
+    pub fn from_height_and_time(height: N, time: N) -> Result<Self, Error> {
         let impulse = impulse_from_height_and_time(height, time)?;
         let gravity = gravity_from_height_and_time(height, time)?;
         Ok(Self {
@@ -72,7 +72,7 @@ where
         + Div<Output = N>,
 {
     /// Construct a trajectory from the height of the peak and the initial impulse
-    pub fn from_height_and_impulse(height: N, impulse: N) -> Result<Self, ResolveError> {
+    pub fn from_height_and_impulse(height: N, impulse: N) -> Result<Self, Error> {
         let time = time_from_height_and_impulse(height, impulse)?;
         let gravity = gravity_from_height_and_impulse(height, impulse)?;
         Ok(Self {
@@ -89,9 +89,9 @@ where
     N: Zero + Float + Div<Output = N>,
 {
     /// Construct a trajectory from the height of the gravity
-    pub fn from_height_and_gravity(height: N, gravity: N) -> Result<Self, ResolveError> {
+    pub fn from_height_and_gravity(height: N, gravity: N) -> Result<Self, Error> {
         let time = time_from_height_and_gravity(height, gravity)?;
-        let impulse = impulse_from_height_and_gravity(height, gravity)?;
+        let impulse = nofailure::impulse_from_height_and_gravity(height, gravity);
         Ok(Self {
             height,
             time,
@@ -112,8 +112,8 @@ where
         + Div<Output = N>,
 {
     /// Construct a trajectory from the time to reach the peak and the initial impulse
-    pub fn from_time_and_impulse(time: N, impulse: N) -> Result<Self, ResolveError> {
-        let height = height_from_time_and_impulse(time, impulse)?;
+    pub fn from_time_and_impulse(time: N, impulse: N) -> Result<Self, Error> {
+        let height = nofailure::height_from_time_and_impulse(time, impulse);
         let gravity = gravity_from_time_and_impulse(time, impulse)?;
         Ok(Self {
             height,
@@ -129,15 +129,16 @@ where
     N: Copy + ConstOne + Neg<Output = N> + Add<Output = N> + Mul<Output = N> + Div<Output = N>,
 {
     /// Construct a trajectory from the time to reach the peak and the gravity
-    pub fn from_time_and_gravity(time: N, gravity: N) -> Result<Self, ResolveError> {
-        let height = height_from_time_and_gravity(time, gravity)?;
-        let impulse = impulse_from_time_and_gravity(time, gravity)?;
-        Ok(Self {
+    pub fn from_time_and_gravity(time: N, gravity: N) -> Self {
+        // this variant cannot fail since no division is involved
+        let height = nofailure::height_from_time_and_gravity(time, gravity);
+        let impulse = nofailure::impulse_from_time_and_gravity(time, gravity);
+        Self {
             height,
             time,
             impulse,
             gravity,
-        })
+        }
     }
 }
 
@@ -152,7 +153,7 @@ where
         + Div<Output = N>,
 {
     /// Construct a trajectory from the initial impulse and the gravity
-    pub fn from_impulse_and_gravity(impulse: N, gravity: N) -> Result<Self, ResolveError> {
+    pub fn from_impulse_and_gravity(impulse: N, gravity: N) -> Result<Self, Error> {
         let height = height_from_impulse_and_gravity(impulse, gravity)?;
         let time = time_from_impulse_and_gravity(impulse, gravity)?;
         Ok(Self {

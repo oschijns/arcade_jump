@@ -25,7 +25,7 @@ Each of those four parameters can be computed by picking only two of the others.
 
 This crate is _no-std_ compatible. It supports the `num-traits` crate.
 It provides three different ways to compute the four parameters:
-- Using the raw functions from the `resolver` module
+- Using the raw functions
 - Using the `Trajectory` type
 - Using the `compute!` procedural macro
 
@@ -34,10 +34,13 @@ It provides three different ways to compute the four parameters:
 
 ### Raw functions
 
-The raw functions for computing each of the four parameters can be found in the `resolver` module.
-All of those functions return a `Result<N, ResolveError>` type.
-Because some of the computations involve divisions, providing a parameter with a value of zero will result in an error.
-
+The raw functions for computing each of the four parameters can be found at the root of this crate.
+All of those functions return a `Result<N, Error>` type.
+Because most of the computations involve divisions, providing a parameter with a value of zero will result in an error. Some of the functions have a nofailure variants available in the `nofailure` module:
+- `height_from_time_and_impulse`
+- `height_from_time_and_gravity`
+- `impulse_from_height_and_gravity`
+- `impulse_from_time_and_gravity`
 
 ### Trajectory type
 
@@ -46,14 +49,14 @@ The crate provide a simple `trajectory::Trajectory<N>` type which contains the f
 
 ### Compute macro
 
-Finally, the crate provide a `macros::compute` procedural macro for writing parameters computation in a less convoluted way.
+Finally, the crate provide a `compute!` procedural macro for writing parameters computation in a less convoluted way.
 The macro expect you to write the two parameters you want as input and the one or two parameters you expect as output.
 The macro will take care of identifying the type of each of the parameters and forwarding computation errors.
 
 ```rust
-use arcade_jump::{resolver::ResolveError, macros::compute};
+use arcade_jump::{Error, compute};
 
-fn main() -> Result<(), ResolveError> {
+fn main() -> Result<(), Error> {
     // I want to define a jump trajectory of 20 units in height and 2 seconds to reach that height.
     let my_height = 20.0f32;
     let my_time = 2.0f32;
@@ -69,11 +72,13 @@ fn main() -> Result<(), ResolveError> {
     // but we define the peak height as being half of the original height.
     // This means that the gravity will be stronger.
     // This is unrealistic but this is how jumps are implemented in most games.
-    let my_gravity2 = compute!(Impulse(my_impulse), Height(my_height / 2) => Gravity)?;
+    let my_gravity2 = compute!(Impulse(my_impulse), Height(my_height / 2.0) => Gravity)?;
 
     // If we want to implement a double jump, we can pick a new height
     // and the initial gravity and compute a new vertical impulse.
     // This time we use shorthands of the four parameters types.
-    let my_impulse2 = compute!(G(my_gravity2), H(my_height / 3) => I)?;
+    let my_impulse2 = compute!(G(my_gravity2), H(my_height / 3.0) => I)?;
+
+    Ok(())
 }
 ```

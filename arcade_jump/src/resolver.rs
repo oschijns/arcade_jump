@@ -1,57 +1,38 @@
+/// Offers computation functions that cannot fail, computation that necessitate a division are not supported
+pub mod nofailure;
+
+/// Contains error types
+pub mod error;
+
+/// Basic utility functions
+pub(crate) mod util;
+
 use core::ops::{Add, Div, Mul, Neg, Sub};
+use error::{Error, ErrorTime};
 use num_traits::{ConstOne, Float, Zero};
-use thiserror::Error;
-
-/// Specify the error encountered when resolving the parameters
-#[derive(Debug, Error)]
-pub enum ResolveError {
-    #[error("Height of the peak cannot be null")]
-    Height,
-
-    #[error("Time to reach the peak cannot be null")]
-    Time,
-
-    #[error("Initial vertical impulse cannot be null")]
-    Impulse,
-
-    #[error("Gravity cannot be null")]
-    Gravity,
-}
-
-/// Specify the error encountered when resolving the parameters
-#[derive(Debug, Error)]
-pub enum DistError {
-    #[error("Time to reach the distance cannot be null")]
-    Time,
-
-    #[error("Distance cannot be null")]
-    Range,
-
-    #[error("Horizontal speed cannot be null")]
-    Speed,
-}
+use util::*;
 
 /// Compute the peak height from the time to reach the peak and the vertical impulse
 #[inline]
-pub fn height_from_time_and_impulse<N>(time: N, impulse: N) -> Result<N, ResolveError>
+pub fn height_from_time_and_impulse<N>(time: N, impulse: N) -> Result<N, Error>
 where
     N: ConstOne + Add<Output = N> + Mul<Output = N> + Div<Output = N>,
 {
-    Ok(halve(impulse * time))
+    Ok(nofailure::height_from_time_and_impulse(time, impulse))
 }
 
 /// Compute the peak height from the time to reach the peak and the gravity
 #[inline]
-pub fn height_from_time_and_gravity<N>(time: N, gravity: N) -> Result<N, ResolveError>
+pub fn height_from_time_and_gravity<N>(time: N, gravity: N) -> Result<N, Error>
 where
     N: Copy + ConstOne + Neg<Output = N> + Add<Output = N> + Mul<Output = N> + Div<Output = N>,
 {
-    Ok(-halve(gravity * pow2(time)))
+    Ok(nofailure::height_from_time_and_gravity(time, gravity))
 }
 
 /// Compute the peak height from the vertical impulse and the gravity
 #[inline]
-pub fn height_from_impulse_and_gravity<N>(impulse: N, gravity: N) -> Result<N, ResolveError>
+pub fn height_from_impulse_and_gravity<N>(impulse: N, gravity: N) -> Result<N, Error>
 where
     N: Copy
         + Zero
@@ -62,7 +43,7 @@ where
         + Div<Output = N>,
 {
     if gravity.is_zero() {
-        Err(ResolveError::Gravity)
+        Err(Error::Gravity)
     } else {
         Ok(-halve(pow2(impulse)) / gravity)
     }
@@ -70,24 +51,24 @@ where
 
 /// Compute time to reach the peak from the peak height and the vertical impulse
 #[inline]
-pub fn time_from_height_and_impulse<N>(height: N, impulse: N) -> Result<N, ResolveError>
+pub fn time_from_height_and_impulse<N>(height: N, impulse: N) -> Result<N, Error>
 where
     N: Copy + Zero + Add<Output = N> + Div<Output = N>,
 {
     if impulse.is_zero() {
-        Err(ResolveError::Impulse)
+        Err(Error::Impulse)
     } else {
         Ok(double(height) / impulse)
     }
 }
 /// Compute time to reach the peak from the peak height and the gravity
 #[inline]
-pub fn time_from_height_and_gravity<N>(height: N, gravity: N) -> Result<N, ResolveError>
+pub fn time_from_height_and_gravity<N>(height: N, gravity: N) -> Result<N, Error>
 where
     N: Zero + Float + Div<Output = N>,
 {
     if gravity.is_zero() {
-        Err(ResolveError::Gravity)
+        Err(Error::Gravity)
     } else {
         Ok((double(height) / gravity).abs().sqrt())
     }
@@ -95,12 +76,12 @@ where
 
 /// Compute time to reach the peak from the vertical impulse and the gravity
 #[inline]
-pub fn time_from_impulse_and_gravity<N>(impulse: N, gravity: N) -> Result<N, ResolveError>
+pub fn time_from_impulse_and_gravity<N>(impulse: N, gravity: N) -> Result<N, Error>
 where
     N: Zero + Neg<Output = N> + Div<Output = N>,
 {
     if gravity.is_zero() {
-        Err(ResolveError::Gravity)
+        Err(Error::Gravity)
     } else {
         Ok(-impulse / gravity)
     }
@@ -108,12 +89,12 @@ where
 
 /// Compute the vertical impulse from the peak height and the time to reach the peak
 #[inline]
-pub fn impulse_from_height_and_time<N>(height: N, time: N) -> Result<N, ResolveError>
+pub fn impulse_from_height_and_time<N>(height: N, time: N) -> Result<N, Error>
 where
     N: Copy + Zero + Add<Output = N> + Div<Output = N>,
 {
     if time.is_zero() {
-        Err(ResolveError::Time)
+        Err(Error::Time)
     } else {
         Ok(double(height) / time)
     }
@@ -121,30 +102,30 @@ where
 
 /// Compute the vertical impulse from the peak height and the gravity
 #[inline]
-pub fn impulse_from_height_and_gravity<N>(height: N, gravity: N) -> Result<N, ResolveError>
+pub fn impulse_from_height_and_gravity<N>(height: N, gravity: N) -> Result<N, Error>
 where
     N: Float,
 {
-    Ok((double(height) * gravity).abs().sqrt())
+    Ok(nofailure::impulse_from_height_and_gravity(height, gravity))
 }
 
 /// Compute the vertical impulse from the time to reach the peak and the gravity
 #[inline]
-pub fn impulse_from_time_and_gravity<N>(time: N, gravity: N) -> Result<N, ResolveError>
+pub fn impulse_from_time_and_gravity<N>(time: N, gravity: N) -> Result<N, Error>
 where
     N: Neg<Output = N> + Mul<Output = N>,
 {
-    Ok(-gravity * time)
+    Ok(nofailure::impulse_from_time_and_gravity(time, gravity))
 }
 
 /// Compute the gravity from the peak height and the time to reach the peak
 #[inline]
-pub fn gravity_from_height_and_time<N>(height: N, time: N) -> Result<N, ResolveError>
+pub fn gravity_from_height_and_time<N>(height: N, time: N) -> Result<N, Error>
 where
     N: Copy + Zero + Neg<Output = N> + Add<Output = N> + Mul<Output = N> + Div<Output = N>,
 {
     if time.is_zero() {
-        Err(ResolveError::Time)
+        Err(Error::Time)
     } else {
         Ok(-double(height) / pow2(time))
     }
@@ -152,7 +133,7 @@ where
 
 /// Compute the gravity from the peak height and the vertical impulse
 #[inline]
-pub fn gravity_from_height_and_impulse<N>(height: N, impulse: N) -> Result<N, ResolveError>
+pub fn gravity_from_height_and_impulse<N>(height: N, impulse: N) -> Result<N, Error>
 where
     N: Copy
         + Zero
@@ -163,7 +144,7 @@ where
         + Div<Output = N>,
 {
     if height.is_zero() {
-        Err(ResolveError::Height)
+        Err(Error::Height)
     } else {
         Ok(-halve(pow2(impulse)) / height)
     }
@@ -171,12 +152,12 @@ where
 
 /// Compute the gravity from the time to reach the peak and the vertical impulse
 #[inline]
-pub fn gravity_from_time_and_impulse<N>(time: N, impulse: N) -> Result<N, ResolveError>
+pub fn gravity_from_time_and_impulse<N>(time: N, impulse: N) -> Result<N, Error>
 where
     N: Zero + Neg<Output = N> + Div<Output = N>,
 {
     if time.is_zero() {
-        Err(ResolveError::Time)
+        Err(Error::Time)
     } else {
         Ok(-impulse / time)
     }
@@ -184,12 +165,12 @@ where
 
 /// Compute the time to reach the peak from the horizontal speed and the range
 #[inline]
-pub fn time_from_speed_and_range<N>(speed: N, range: N) -> Result<N, DistError>
+pub fn time_from_speed_and_range<N>(speed: N, range: N) -> Result<N, ErrorTime>
 where
     N: Zero + ConstOne + Add<Output = N> + Div<Output = N> + Div<Output = N>,
 {
     if speed.is_zero() {
-        Err(DistError::Speed)
+        Err(ErrorTime::Speed)
     } else {
         Ok(halve(range) / speed)
     }
@@ -201,7 +182,7 @@ pub fn time_from_speed_and_range_with_ratio<N>(
     speed: N,
     range: N,
     ratio: N,
-) -> Result<(N, N), DistError>
+) -> Result<(N, N), ErrorTime>
 where
     N: Copy
         + Zero
@@ -212,39 +193,11 @@ where
         + Div<Output = N>,
 {
     if speed.is_zero() {
-        Err(DistError::Speed)
+        Err(ErrorTime::Speed)
     } else {
         let time = halve(range) / speed;
         Ok((time * ratio, time * (N::ONE - ratio)))
     }
-}
-
-/// Compute the half of a value
-#[inline]
-fn halve<N>(n: N) -> N
-where
-    N: ConstOne + Add<Output = N> + Div<Output = N>,
-{
-    let two = N::ONE + N::ONE;
-    n / two
-}
-
-/// Compute the double of a value
-#[inline]
-fn double<N>(n: N) -> N
-where
-    N: Copy + Add<Output = N>,
-{
-    n + n
-}
-
-/// Compute the square of a value
-#[inline]
-fn pow2<N>(n: N) -> N
-where
-    N: Copy + Mul<Output = N>,
-{
-    n * n
 }
 
 #[cfg(test)]
