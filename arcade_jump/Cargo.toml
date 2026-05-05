@@ -1,7 +1,7 @@
 [package]
 name = "arcade_jump"
 description = "Arcade jump trajectory configurator"
-version = "0.0.2"
+version = "0.0.3"
 keywords.workspace = true
 categories.workspace = true
 repository.workspace = true

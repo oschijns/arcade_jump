@@ -1,7 +1,9 @@
 //! Error types
 
+use core::cmp::{Eq, PartialEq};
+
 /// Specify the error encountered when resolving the parameters
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, Clone, Copy, PartialEq, Eq)]
 pub enum Error {
     #[error("Height of the peak cannot be null")]
     Height,
@@ -18,7 +20,7 @@ pub enum Error {
 
 /// Specify the error encountered when resolving the parameters to
 /// compute the time to reach the peak from horizontal range and speed.
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, Clone, Copy, PartialEq, Eq)]
 pub enum ErrorTime {
     #[error("Time to reach the distance cannot be null")]
     Time,
